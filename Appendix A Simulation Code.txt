@@ -1,0 +1,79 @@
+Appendix A
+======================================================================================================================
+ProVerif Simulation Code
+======================================================================================================================
+free c: channel.
+type timestamp.
+free SN1, SN2: bitstring [private].
+free SID_IoT: bitstring [private].
+free ID_IoT: bitstring.
+free ID_U: bitstring.
+free PW_U: bitstring [private].
+free BIO_U: bitstring [private].
+free ID_Dy: bitstring.
+free ID_m: bitstring.
+free ID_Dy_new: bitstring.
+free r1_user, r2_fog, r3_user, r4_fog, r5_iot: bitstring [private].
+free HPW_U_stored: bitstring [private].
+free HIB_U_stored: bitstring [private].
+free V1_stored, V2_stored, V3_stored: bitstring [private].
+free SK_IoT, SK_U, SK_FN: bitstring [private].
+fun h(bitstring): bitstring.
+fun concat(bitstring, bitstring): bitstring.
+fun xor(bitstring, bitstring): bitstring.
+equation forall x: bitstring, y: bitstring; xor(xor(x,y),y) = x [convergent].
+let fogSetup() =
+  let Y = h(concat(ID_IoT, SN1)) in
+  let Z = h(concat(concat(Y, SN1), SN2)) in
+  out(c, (Y, Z)).
+let userRegistration() =
+  new r1_new: bitstring;
+  let HPW_U_val = h(concat(concat(ID_U, PW_U), r1_new)) in
+  let HIB_U_val = h(concat(BIO_U, r1_new)) in
+  out(c, (ID_U, HPW_U_val, HIB_U_val, r1_new)).
+let userAuth() =
+  new r3_new: bitstring;
+  let h_IDDy_SN1_IDm = h(concat(concat(ID_Dy, SN1), ID_m)) in
+  let V1_val = xor(h_IDDy_SN1_IDm, h(concat(HPW_U_stored, HIB_U_stored))) in
+  let V2_val = xor(r2_fog, h_IDDy_SN1_IDm) in
+  let V3_val = h(concat(concat(HPW_U_stored, r2_fog), HIB_U_stored)) in
+  out(c, (V1_val, V2_val, V3_val, ID_Dy, r3_new)).
+let fogToIoT() =
+  in(c, (W1:bitstring, W4:bitstring, W5:bitstring, T3:timestamp));
+  let h_IDDy_SN1_IDm = h(concat(concat(ID_Dy, SN1), ID_m)) in
+  let r3_recovered = xor(W1, h_IDDy_SN1_IDm) in
+  let hPUHIB = xor(W4, r3_recovered) in
+  if W5 = h(concat(concat(concat(ID_m, ID_U), r2_fog), V1_stored)) then
+    new r5_new: bitstring;
+    let X1 = xor(r5_new, h(concat(r3_recovered, r4_fog))) in
+    let SK_IoT_val = h(concat(concat(r3_recovered, r4_fog), r5_new)) in
+    let X2 = h(concat(concat(SK_IoT_val, ID_U), ID_m)) in
+    out(c, (X1, X2, SK_IoT_val)).
+let iotToUser() =
+  in(c, (X1:bitstring, X2:bitstring, T5:timestamp));
+  let r5_recovered = xor(X1, h(concat(r3_user, r4_fog))) in
+  let SK_U_val = h(concat(concat(r3_user, r4_fog), r5_recovered)) in
+  if X2 = h(concat(concat(SK_U_val, ID_U), ID_m)) then
+    let X3 = h(concat(concat(concat(V1_stored, r4_fog), r5_recovered), ID_Dy_new)) in
+    let X4 = h(concat(concat(SK_U_val, V1_stored), ID_Dy_new)) in
+    out(c, (X3, X4, SK_U_val)).
+event userAuthenticated(bitstring).
+event fogAuthenticated(bitstring).
+event iotAuthenticated(bitstring).
+event sessionKeyEstablished(bitstring).
+query attacker(SN1).
+query attacker(SN2).
+query attacker(SK_IoT).
+query attacker(SK_U).
+query attacker(SK_FN).
+query ID_U: bitstring; event(userAuthenticated(ID_U)) ==> event(fogAuthenticated(ID_U)).
+query ID_U: bitstring; event(fogAuthenticated(ID_U)) ==> event(iotAuthenticated(ID_U)).
+process
+  (* Run all protocol phases in parallel *)
+  (
+    !fogSetup() |
+    !userRegistration() |
+    !userAuth() |
+    !fogToIoT() |
+    !iotToUser()
+  )

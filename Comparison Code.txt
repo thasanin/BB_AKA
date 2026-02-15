@@ -1,0 +1,121 @@
+======================================================================================================================
+OVERALL COMPARISON ANALYSIS
+======================================================================================================================
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+data = {
+    'Schemes': ['[41]', '[42]', '[43]', '[44]', 'Proposed'],
+    'Computation_Cost': [111.35, 96.34, 470.4, 208.6, 17.078],
+    'Communication_Cost': [5856, 4332, 4096, 5312, 2934],
+    'Energy_Consumption': [1.3, 1.04, 5.11, 2.3, 0.2]
+}
+df = pd.DataFrame(data)
+print("Data Table:")
+print(df)
+print("\n")
+plt.style.use('default')
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+fig.suptitle('Comparative Analysis of Different Schemes', fontsize=16, fontweight='bold')
+bars1 = axes[0,0].bar(df['Schemes'], df['Computation_Cost'], color=colors, alpha=0.7, edgecolor='black')
+axes[0,0].set_title('Computation Cost Comparison', fontweight='bold')
+axes[0,0].set_ylabel('Computation Cost')
+axes[0,0].grid(True, alpha=0.3)
+for bar in bars1:
+    height = bar.get_height()
+    axes[0,0].text(bar.get_x() + bar.get_width()/2., height + 5,
+                  f'{height:.1f}', ha='center', va='bottom', fontweight='bold')
+bars2 = axes[0,1].bar(df['Schemes'], df['Communication_Cost'], color=colors, alpha=0.7, edgecolor='black')
+axes[0,1].set_title('Communication Cost Comparison', fontweight='bold')
+axes[0,1].set_ylabel('Communication Cost')
+axes[0,1].grid(True, alpha=0.3)
+for bar in bars2:
+    height = bar.get_height()
+    axes[0,1].text(bar.get_x() + bar.get_width()/2., height + 100,
+                  f'{height}', ha='center', va='bottom', fontweight='bold')
+bars3 = axes[1,0].bar(df['Schemes'], df['Energy_Consumption'], color=colors, alpha=0.7, edgecolor='black')
+axes[1,0].set_title('Energy Consumption Comparison', fontweight='bold')
+axes[1,0].set_ylabel('Energy Consumption (J)')
+axes[1,0].grid(True, alpha=0.3)
+for bar in bars3:
+    height = bar.get_height()
+    axes[1,0].text(bar.get_x() + bar.get_width()/2., height + 0.1,
+                  f'{height:.2f}', ha='center', va='bottom', fontweight='bold')
+axes[1,1].axis('off')
+plt.tight_layout()
+plt.show()
+fig, ax = plt.subplots(figsize=(12, 8))
+x = np.arange(len(df['Schemes']))
+width = 0.25
+comp_normalized = df['Computation_Cost'] / max(df['Computation_Cost'])
+comm_normalized = df['Communication_Cost'] / max(df['Communication_Cost'])
+energy_normalized = df['Energy_Consumption'] / max(df['Energy_Consumption'])
+bars1 = ax.bar(x - width, comp_normalized, width, label='Computation Cost', color='skyblue', edgecolor='navy')
+bars2 = ax.bar(x, comm_normalized, width, label='Communication Cost', color='lightcoral', edgecolor='darkred')
+bars3 = ax.bar(x + width, energy_normalized, width, label='Energy Consumption', color='lightgreen', edgecolor='darkgreen')
+ax.set_xlabel('Schemes')
+ax.set_ylabel('Normalized Values')
+ax.set_title('Normalized Comparison of All Metrics', fontweight='bold')
+ax.set_xticks(x)
+ax.set_xticklabels(df['Schemes'])
+ax.legend()
+ax.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, polar=True)
+categories = ['Computation\nCost', 'Communication\nCost', 'Energy\nConsumption']
+values_normalized = []
+for i in range(len(df)):
+    scheme_values = [
+        df['Computation_Cost'].iloc[i] / max(df['Computation_Cost']),
+        df['Communication_Cost'].iloc[i] / max(df['Communication_Cost']),
+        df['Energy_Consumption'].iloc[i] / max(df['Energy_Consumption'])
+    ]
+    values_normalized.append(scheme_values)
+angles = np.linspace(0, 2*np.pi, len(categories), endpoint=False).tolist()
+angles += angles[:1]
+values_normalized = [vals + vals[:1] for vals in values_normalized]
+for i, scheme in enumerate(df['Schemes']):
+    ax.plot(angles, values_normalized[i], 'o-', linewidth=2, label=scheme, color=colors[i])
+    ax.fill(angles, values_normalized[i], alpha=0.1, color=colors[i])
+ax.set_xticks(angles[:-1])
+ax.set_xticklabels(categories)
+ax.set_yticklabels([])
+ax.set_title('Radar Chart Comparison of Schemes', fontweight='bold', size=14)
+ax.legend(bbox_to_anchor=(1.1, 1.0))
+plt.tight_layout()
+plt.show()
+print("Performance Improvement of Proposed Scheme over Others:")
+print("=" * 50)
+baseline_avg = {
+    'Computation_Cost': np.mean(df['Computation_Cost'][:-1]),
+    'Communication_Cost': np.mean(df['Communication_Cost'][:-1]),
+    'Energy_Consumption': np.mean(df['Energy_Consumption'][:-1])
+}
+proposed = df[df['Schemes'] == 'Proposed'].iloc[0]
+improvements = {}
+for metric in ['Computation_Cost', 'Communication_Cost', 'Energy_Consumption']:
+    improvement = ((baseline_avg[metric] - proposed[metric]) / baseline_avg[metric]) * 100
+    improvements[metric] = improvement
+    print(f"{metric}: {improvement:.1f}% improvement")
+fig, ax = plt.subplots(figsize=(12, 8))
+df['Composite_Score'] = (df['Computation_Cost'] / max(df['Computation_Cost']) + 
+                         df['Communication_Cost'] / max(df['Communication_Cost']) + 
+                         df['Energy_Consumption'] / max(df['Energy_Consumption']))
+bars = ax.bar(df['Schemes'], df['Composite_Score'], color=colors, alpha=0.7, edgecolor='black')
+ax.set_ylabel('Composite Performance Score (Lower is Better)')
+ax.set_title('Overall Composite Performance Comparison', fontweight='bold')
+ax.grid(True, alpha=0.3)
+for bar in bars:
+    height = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width()/2., height + 0.02,
+            f'{height:.3f}', ha='center', va='bottom', fontweight='bold')
+plt.tight_layout()
+plt.show()
+print("\nSummary Statistics:")
+print("=" * 40)
+print(f"Computation Cost - Min: {min(df['Computation_Cost']):.2f}, Max: {max(df['Computation_Cost']):.2f}, Proposed: {proposed['Computation_Cost']:.2f}")
+print(f"Communication Cost - Min: {min(df['Communication_Cost'])}, Max: {max(df['Communication_Cost'])}, Proposed: {proposed['Communication_Cost']}")
+print(f"Energy Consumption - Min: {min(df['Energy_Consumption']):.2f}, Max: {max(df['Energy_Consumption']):.2f}, Proposed: {proposed['Energy_Consumption']:.2f}")

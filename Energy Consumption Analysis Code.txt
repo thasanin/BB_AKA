@@ -1,0 +1,75 @@
+======================================================================================================================
+Energy Consumption Analysis
+======================================================================================================================
+import matplotlib.pyplot as plt
+import numpy as np
+ENERGY_CONSUMPTION = {
+    'hash_sha256': 5.9,      # μJ per SHA-256 operation
+    'xor_operation': 0.001,  # μJ per XOR operation
+    'random_generation': 2.1, # μJ per random number generation
+}
+def count_operations():
+    operations = {
+        'hash_sha256': 0,
+        'xor_operation': 0,
+        'random_generation': 0
+    }
+    operations['hash_sha256'] += 8  # h(IDU||PWU||HIBU), h(IDU||PWU||r1), h(BIOU||r1), etc.
+    operations['xor_operation'] += 4  # r1 = V_A ⊕ h(...), r2 = V_2 ⊕ h(...), etc.
+    operations['random_generation'] += 2  # r1, r3
+    operations['hash_sha256'] += 6  # W_2*, W_3*, h(IDIoT||SN1), etc.
+    operations['xor_operation'] += 1  # r2 = V_2 ⊕ h(...)
+    operations['hash_sha256'] += 5  # W_5*, h(r3||r4), etc.
+    operations['xor_operation'] += 2  # r4 = W_4 ⊕ h(...), X1 = r5 ⊕ h(...)
+    operations['random_generation'] += 2  # r4, r5
+    operations['hash_sha256'] += 6  # X2*, X3*, X4*, SK calculations
+    operations['xor_operation'] += 1  # r5 = X1 ⊕ h(r3||r4)
+    return operations
+def calculate_energy_consumption(operations):
+    total_energy = 0
+    energy_breakdown = {}
+    for op_type, count in operations.items():
+        energy = count * ENERGY_CONSUMPTION[op_type]
+        energy_breakdown[op_type] = energy
+        total_energy += energy
+    return total_energy, energy_breakdown
+print(" Authentication Protocol Energy Consumption Analysis")
+print("=" * 50)
+operations = count_operations()
+total_energy, energy_breakdown = calculate_energy_consumption(operations)
+print("\n Operation Count:")
+for op_type, count in operations.items():
+    print(f"  {op_type}: {count} operations")
+print(f"\n⚡ Energy Consumption Breakdown:")
+for op_type, energy in energy_breakdown.items():
+    print(f"  {op_type}: {energy:.3f} μJ")
+print(f"\n Total Energy Consumption: {total_energy:.3f} μJ")
+print(f"   In millijoules: {total_energy/1000:.6f} mJ")
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+labels = [f'SHA-256\n({operations["hash_sha256"]} ops)',
+          f'XOR\n({operations["xor_operation"]} ops)',
+          f'Random Gen\n({operations["random_generation"]} ops)']
+sizes = [energy_breakdown['hash_sha256'],
+         energy_breakdown['xor_operation'],
+         energy_breakdown['random_generation']]
+colors = ['#ff9999', '#66b3ff', '#99ff99']
+ax1.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+ax1.set_title('Energy Consumption Distribution')
+op_types = ['SHA-256 Hash', 'XOR Operations', 'Random Generation']
+counts = [operations['hash_sha256'], operations['xor_operation'], operations['random_generation']]
+energy_per_op = [ENERGY_CONSUMPTION['hash_sha256'], ENERGY_CONSUMPTION['xor_operation'], ENERGY_CONSUMPTION['random_generation']]
+x = np.arange(len(op_types))
+width = 0.35
+ax2.bar(x - width/2, counts, width, label='Operation Count', color='lightblue')
+ax2.set_ylabel('Operation Count')
+ax2.set_xlabel('Operation Type')
+ax2.set_xticks(x)
+ax2.set_xticklabels(op_types)
+ax2_twin = ax2.twinx()
+ax2_twin.bar(x + width/2, energy_per_op, width, label='Energy per Op (μJ)', color='lightcoral')
+ax2_twin.set_ylabel('Energy per Operation (μJ)')
+ax2.set_title('Operation Count vs Energy per Operation')
+ax2.legend(loc='upper left')
+ax2_twin.legend(loc='upper right')
+plt.tight_layout()
+plt.show()
