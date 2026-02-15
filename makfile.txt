@@ -1,0 +1,63 @@
+# Makefile for Lightweight Biometric Authentication Protocol Testbed
+
+CXX = g++
+CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -pthread
+LDFLAGS = -lssl -lcrypto -lpthread
+
+# For Raspberry Pi compilation (uncomment if compiling on Raspberry Pi)
+# CXXFLAGS += -D__arm__ -lwiringPi
+
+TARGET = auth_protocol_testbed
+SOURCES = main_auth_protocol.cpp
+HEADERS = 
+
+all: $(TARGET) python_analysis
+
+$(TARGET): $(SOURCES) $(HEADERS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES) $(LDFLAGS)
+	@echo "Build complete: $(TARGET)"
+
+debug: CXXFLAGS += -g -DDEBUG
+debug: $(TARGET)
+
+clean:
+	rm -f $(TARGET)
+	rm -f *.o
+	rm -f *.csv
+	rm -f *.png
+	rm -rf analysis_output
+
+run: $(TARGET)
+	./$(TARGET)
+
+python_analysis:
+	@echo "Checking Python dependencies..."
+	pip3 install --quiet matplotlib numpy pandas seaborn scipy
+	@echo "Python dependencies installed"
+
+analysis: python_analysis
+	python3 analysis_visualization.py
+
+test: $(TARGET)
+	./$(TARGET) --test
+
+benchmark: $(TARGET)
+	./$(TARGET) --benchmark
+
+full: clean all run analysis
+	@echo "Full testbed execution complete"
+
+# Create GitHub repository structure
+github-prepare:
+	mkdir -p github_repo
+	mkdir -p github_repo/src
+	mkdir -p github_repo/python
+	mkdir -p github_repo/results
+	mkdir -p github_repo/docs
+	cp $(SOURCES) github_repo/src/
+	cp analysis_visualization.py github_repo/python/
+	cp Makefile github_repo/
+	cp README.md github_repo/
+	@echo "GitHub repository structure created in 'github_repo/'"
+
+.PHONY: all clean run analysis test benchmark full github-prepare python_analysis
