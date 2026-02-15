@@ -1,0 +1,76 @@
+free c: channel.
+free IDi, PWi, r1, r5, x, N1, N2: bitstring [private].
+const P: bitstring.
+fun h(bitstring): bitstring.
+fun g(bitstring): bitstring.
+reduc forall m: bitstring; ln(g(m)) = m.
+reduc forall m,n: bitstring; h(m||n) = h(n||m).
+fun xor(bitstring, bitstring): bitstring.
+equation forall m,n: bitstring; xor(xor(m,n),n) = m.
+free D1, D2, D3: bitstring [private].
+event UserStarted(bitstring).
+event ServerAuthenticated(bitstring).
+event SensorAuthenticated(bitstring).
+event SessionKeyEstablished(bitstring,bitstring).
+  new IDi: bitstring;
+  new PWi: bitstring;
+  new r1: bitstring;
+  let D1 = xor(E1, r5) in
+  let D2 = xor(E4, HPWistar) in
+  let D3 = xor(r1, h(IDi||PWi)) in
+  let HPWistar = h(PWi||r1) in
+  let E4 = xor(D2, HPWistar) in
+let User =
+  new r1: bitstring;
+  new r5: bitstring;
+  new x: bitstring;
+  let r1star = xor(D3, h(IDi||PWi)) in
+  if r1star = r1 then
+    let HPWistar = h(PWi||r1star) in
+    let E1 = xor(D1, r5) in
+    let E2 = xor(h(IDi||HPWistar), r5) in
+    let E3 = g(x) in
+    let E4 = xor(D2, HPWistar) in
+    let E5 = h(IDi||E3||E4||r5||x) in
+    out(c, (E1, x, E3, r5, E5));
+    in(c, (E6:bitstring, E7:bitstring, E8:bitstring, E9:bitstring, E10:bitstring, r1recv:bitstring));
+    if r1recv = r1 then
+      let E4calc = xor(h(r1), E8) in
+      new N2: bitstring;
+      let E7star = mod(exp(E3, N2), P) in
+      if E7star = E6 then
+        let SK = h(IDi||E2||E3||E5) in
+        let E10star = h(IDi||E1||E2||E4calc||E5||E8||E9||SK||r1) in
+        out(c, (E7, E8, E9, E10star, r1));
+        in(c, (E10final:bitstring, r1final:bitstring));
+        if r1final = r1 then
+          let r1calc = xor(E3, h(SK||E1||E2)) in
+          if r1calc = r1 then
+            event SessionKeyEstablished(IDi,SK).
+let Server =
+  in(c, (E1:bitstring, xrecv:bitstring, E3:bitstring, r5recv:bitstring, E5:bitstring));
+  let E2star = xor(h(IDi||h(PWi||r1)), r5recv) in
+  if xrecv = ln(E3) then
+    let E5star = h(IDi||E3||E4||r5recv||xrecv) in
+    if E5star = E5 then
+      new N1: bitstring;
+      let E6 = mod(exp(g(N1), 1), P) in
+      let E7 = mod(exp(E3, N1), P) in
+      let E8 = xor(E4, h(r1)) in
+      let E9 = h(xrecv||r1) in
+      let E10 = h(IDi||E1||E2star||E4||E5star||E8||E9||r1) in
+      out(c, (E6, E7, E8, E9, E10, r1));
+      event ServerAuthenticated(IDi).
+let Sensor =
+  in(c, (E7:bitstring, E8:bitstring, E9:bitstring, E10star:bitstring, r1recv:bitstring));
+  if x = ln(E3) then
+    let E8star = xor(E4, h(r1)) in
+    let E9star = h(x||r1) in
+    if E9star = E9 then
+      let SK = h(IDi||E2||E3||E5) in
+      let E10calc = h(IDi||E1||E2||E4||E5||E8||E9||SK||r1) in
+      if E10calc = E10star then
+        out(c, (E10star, r1));
+        event SensorAuthenticated(IDi).
+process 
+  ( (!User) | (!Server) | (!Sensor) )
